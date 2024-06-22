@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "CPETLiteAPI"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1tiyoc2b1lv20"
+s3_prefix = "CPETLiteAPI"
+region = "us-west-2"
+profile = "cpetlite"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"

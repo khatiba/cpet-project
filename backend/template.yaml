@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  CPET Lite API
+
+Globals:
+  Function:
+    Timeout: 3
+    Handler: app.lambda_handler
+    Runtime: python3.8
+    Environment:
+      Variables:
+        DataBucket: !ImportValue CPETLiteDataBucket
+
+Resources:
+  CPETLiteApi:
+    Type: AWS::Serverless::HttpApi
+
+  CPETLiteLambdaIamRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Description: "Allow lambda to upload and manage files in data bucket"
+      Tags: 
+        - Key: "Name"
+          Value: "Lambda Data Bucket Role"
+      Policies: 
+        - PolicyName: "AWSLambdaExecuteS3"
+          PolicyDocument:
+           Version: '2012-10-17' 
+           Statement:
+             - Effect: Allow
+               Action:
+                 - s3:PutObject
+                 - s3:GetObject
+                 - s3:AbortMultipartUpload
+               Resource: !Sub
+                - 'arn:aws:s3:::${BucketName}/*'
+                - BucketName: !ImportValue CPETLiteDataBucket
+        - PolicyName: "AWSLambdaExecuteCloudWatch"
+          PolicyDocument:
+           Version: '2012-10-17' 
+           Statement:
+             - Effect: Allow
+               Action:
+                 - logs:CreateLogGroup
+                 - logs:CreateLogStream
+                 - logs:PutLogEvents
+               Resource: "*"
+
+  UploadSnapshotFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/upload_snapshot/
+      Role: !GetAtt CPETLiteLambdaIamRole.Arn
+      Events:
+        MeFunction:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CPETLiteApi
+            Path: /upload_snapshot
+            Method: POST
+
+
+Outputs:
+  CPETLiteApi:
+    Description: "API Gateway Endpoint URL"
+    Value: !Sub "https://${CPETLiteApi}.execute-api.${AWS::Region}.amazonaws.com"
+
